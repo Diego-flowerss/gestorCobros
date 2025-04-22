@@ -50,6 +50,55 @@ CREATE TABLE cuotas (
     FOREIGN KEY (residente_id) REFERENCES residentes(id)
 );
 
+CREATE TABLE vehiculos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    residente_id INT NOT NULL,
+    marca VARCHAR(50),
+    modelo VARCHAR(50),
+    placa VARCHAR(20) UNIQUE NOT NULL,
+    color VARCHAR(30),
+    FOREIGN KEY (residente_id) REFERENCES residentes(id)
+);
+
+CREATE TABLE residencias (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    direccion VARCHAR(255) NOT NULL,
+    numero_unidad VARCHAR(20) NOT NULL UNIQUE,
+    tipo ENUM('casa', 'apartamento') NOT NULL
+);
+
+ALTER TABLE residentes
+ADD COLUMN residencia_id INT,
+ADD FOREIGN KEY (residencia_id) REFERENCES residencias(id);
+
+CREATE TABLE estado_cuenta_general (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    descripcion TEXT,
+    ingreso DECIMAL(10,2) DEFAULT 0.00,
+    egreso DECIMAL(10,2) DEFAULT 0.00,
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE proveedores (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    servicio VARCHAR(100) NOT NULL,
+    telefono VARCHAR(20),
+    email VARCHAR(100),
+    direccion VARCHAR(255)
+);
+
+CREATE TABLE pagos_proveedores (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    proveedor_id INT NOT NULL,
+    descripcion TEXT,
+    monto DECIMAL(10,2) NOT NULL,
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (proveedor_id) REFERENCES proveedores(id)
+);
+
+
+
 -- Procedimiento para aplicar recargo por pago tardío
 DELIMITER $$
 CREATE PROCEDURE aplicar_recargo()
@@ -131,6 +180,36 @@ BEGIN
     UPDATE estados_cuenta 
     SET saldo = saldo - NEW.monto
     WHERE residente_id = NEW.residente_id;
+END $$
+
+DELIMITER ;
+
+-- registrar pago en estado de cuenta general
+
+DELIMITER $$
+
+CREATE TRIGGER registrar_ingreso_general
+AFTER INSERT ON pagos
+FOR EACH ROW
+BEGIN
+  IF NEW.estado = 'validado' THEN
+    INSERT INTO estado_cuenta_general (descripcion, ingreso)
+    VALUES (CONCAT('Pago recibido del residente ID ', NEW.residente_id, ', Recibo: ', NEW.recibo), NEW.monto);
+  END IF;
+END $$
+
+DELIMITER ;
+
+-- egresos por proovedores
+
+DELIMITER $$
+
+CREATE TRIGGER registrar_egreso_general
+AFTER INSERT ON pagos_proveedores
+FOR EACH ROW
+BEGIN
+  INSERT INTO estado_cuenta_general (descripcion, egreso)
+  VALUES (CONCAT('Pago al proveedor ID ', NEW.proveedor_id, ': ', NEW.descripcion), NEW.monto);
 END $$
 
 DELIMITER ;

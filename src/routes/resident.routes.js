@@ -9,14 +9,14 @@ import {
 
 const router = Router();
 
-router.get("/ping", pingResident);
+router.get("/residente", pingResident);
 
-router.get("/ping/:resident", pingResidentById);
+router.get("/residente/:resident", pingResidentById);
 
-router.post("/ping", postResident);
+router.post("/residente", postResident);
 
-router.delete("/ping/:resident", deleteResident);
+router.delete("/residente/:resident", deleteResident);
 
-router.patch("/ping/:resident", updateResident);
+router.patch("/residente/:resident", updateResident);
 
 export default router;
